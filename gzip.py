@@ -180,6 +180,14 @@ class GZIP:
 
             print("Array de comprimentos dos códigos:", code_lengths)
             
+            MAX_COMP = max(code_lengths)
+            array_cont_comp = self.contagemComprimentos(code_lengths, MAX_COMP)
+            print("Array soma da ocorrencia de cada comprimento: ", array_cont_comp)
+            
+            arrayInicioCodigo = self.ArrayCodigos(array_cont_comp, MAX_COMP)
+            print("Array para inicio de cada codigo: ", arrayInicioCodigo)
+            
+            self.gerarCodigos(array_cont_comp, arrayInicioCodigo, MAX_COMP)
             #
 
             # update number of blocks read
@@ -192,6 +200,34 @@ class GZIP:
         
     def getInfos(self):
         return [self.readBits(5), self.readBits(5), self.readBits(4)]
+    
+    def contagemComprimentos(self, comprimentos, maxComp):
+        array = [0] * (maxComp + 1)  # Cria um array com tamanho do maior comprimento + 1, para que inclua tambem esse elemento no array
+        for i in range(maxComp + 1):
+            count = 0
+            for j in comprimentos:
+                if(j == i):
+                    count += 1
+            array[i] = count
+        return array
+            
+    def ArrayCodigos(self, contagens, maxComp):
+        code = 0
+        contagens[0] = 0
+        next_code = [0] * (maxComp + 1)
+        for bits in range(1, maxComp + 1):
+            code = (code + contagens[bits - 1]) << 1
+            next_code[bits] = code;
+        return next_code
+    
+    def gerarCodigos(self, arrayContagens, arrayInicio, maxComp):
+        for i in range(1, maxComp + 1):
+            if(arrayContagens[i] != 0):
+                inicioCodigo = arrayInicio[i]
+                fimCodigo = arrayContagens[i] + inicioCodigo
+                for j in range(inicioCodigo, fimCodigo):
+                    code = bin(j)
+                    print(code)
 
     def getOrigFileSize(self):
         ''' reads file size of original file (before compression) - ISIZE '''
