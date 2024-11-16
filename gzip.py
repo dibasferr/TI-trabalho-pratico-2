@@ -160,6 +160,7 @@ class GZIP:
 
             # --- STUDENTS --- ADD CODE HERE
             
+            # SEMANA 1
             infos = self.getInfos()
             HLIT = infos[0]
             HDIST = infos[1]
@@ -172,7 +173,7 @@ class GZIP:
             code_length_order = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
 
             # Array para armazenar comprimentos dos códigos (HCLEN + 4 valores, cada um com 3 bits)
-            code_lengths = [0] * 19
+            code_lengths = [0] * len(code_length_order)
 
             for i in range(HCLEN + 4):
                 length = self.readBits(3)  # Lê 3 bits para o comprimento do código
@@ -180,14 +181,16 @@ class GZIP:
 
             print("Array de comprimentos dos códigos:", code_lengths)
             
-            MAX_COMP = max(code_lengths)
-            array_cont_comp = self.contagemComprimentos(code_lengths, MAX_COMP)
+            # SEMANA 2
+            MAX_COMP = max(code_lengths)  # Pega o maior valor do comprimento de codigos
+            array_cont_comp = self.contagemComprimentos(code_lengths, MAX_COMP)  # armazena em array_cont_comp as ocorrencias de cada comprimento
             print("Array soma da ocorrencia de cada comprimento: ", array_cont_comp)
             
-            arrayInicioCodigo = self.ArrayCodigos(array_cont_comp, MAX_COMP)
+            arrayInicioCodigo = self.ArrayCodigos(array_cont_comp, MAX_COMP)  # armazena em arrayInicioCodigo o incio de codigo para cada comprimento
             print("Array para inicio de cada codigo: ", arrayInicioCodigo)
             
-            self.gerarCodigos(array_cont_comp, arrayInicioCodigo, MAX_COMP)
+            arrayCodigos = self.gerarCodigos(array_cont_comp, arrayInicioCodigo, MAX_COMP)
+            print("Array dos codigos: ", arrayCodigos)
             #
 
             # update number of blocks read
@@ -216,18 +219,27 @@ class GZIP:
         contagens[0] = 0
         next_code = [0] * (maxComp + 1)
         for bits in range(1, maxComp + 1):
-            code = (code + contagens[bits - 1]) << 1
+            code = (code + contagens[bits - 1]) << 1 # Logica para o começo do proximo codigo de comprimento (equivalente a multiplica po 2)
             next_code[bits] = code;
         return next_code
     
     def gerarCodigos(self, arrayContagens, arrayInicio, maxComp):
+        soma = sum(arrayContagens)
+        arrayCodigos = [0] * soma  # Criação do array de códigos, com o tamanho das ocorrências (excluindo o 0)
+        indice = 0
         for i in range(1, maxComp + 1):
-            if(arrayContagens[i] != 0):
-                inicioCodigo = arrayInicio[i]
-                fimCodigo = arrayContagens[i] + inicioCodigo
+            if arrayContagens[i] != 0:
+                inicioCodigo = arrayInicio[i]  # Começo do código de comprimento i
+                fimCodigo = arrayContagens[i] + inicioCodigo  # Fim do código de comprimento i
                 for j in range(inicioCodigo, fimCodigo):
-                    code = bin(j)
-                    print(code)
+                    code = bin(j)[2:]  # Remove o prefixo "0b"
+                
+                    # Completa o código com zeros à esquerda para atingir o comprimento desejado
+                    if len(code) < i:
+                        code = code.zfill(i)  # preenche com zeros à esquerda até atingir o tamanho `i`
+                    arrayCodigos[indice] = code
+                    indice += 1
+        return arrayCodigos
 
     def getOrigFileSize(self):
         ''' reads file size of original file (before compression) - ISIZE '''
