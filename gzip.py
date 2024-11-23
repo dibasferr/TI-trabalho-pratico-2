@@ -10,7 +10,9 @@ Created on Mon Nov 11 14:31:08 2024
 # Teoria da Informacao, LEI, 2022
 
 import sys
+import numpy as np
 from huffmantree import HuffmanTree
+hft = HuffmanTree()
 
 
 class GZIPHeader:
@@ -161,6 +163,7 @@ class GZIP:
             # --- STUDENTS --- ADD CODE HERE
             
             # SEMANA 1
+            print("\n")
             infos = self.getInfos()
             HLIT = infos[0]
             HDIST = infos[1]
@@ -168,6 +171,7 @@ class GZIP:
             print(HLIT)
             print(HDIST)
             print(HCLEN)
+            print("\n")
             
             # Tabela para a ordem específica dos códigos
             code_length_order = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
@@ -180,17 +184,41 @@ class GZIP:
                 code_lengths[code_length_order[i]] = length  # Armazena na ordem especificada
 
             print("Array de comprimentos dos códigos:", code_lengths)
+            print("\n")
             
             # SEMANA 2
             MAX_COMP = max(code_lengths)  # Pega o maior valor do comprimento de codigos
             array_cont_comp = self.contagemComprimentos(code_lengths, MAX_COMP)  # armazena em array_cont_comp as ocorrencias de cada comprimento
             print("Array soma da ocorrencia de cada comprimento: ", array_cont_comp)
+            print("\n")
             
             arrayInicioCodigo = self.ArrayCodigos(array_cont_comp, MAX_COMP)  # armazena em arrayInicioCodigo o incio de codigo para cada comprimento
             print("Array para inicio de cada codigo: ", arrayInicioCodigo)
+            print("\n")
             
             arrayCodigos = self.gerarCodigos(array_cont_comp, arrayInicioCodigo, MAX_COMP)
             print("Array dos codigos: ", arrayCodigos)
+            print("\n")
+            
+            arrayIndices = self.gerarArrayIndices(code_lengths, MAX_COMP)
+            print("Array de Índices:", arrayIndices)
+            print("\n")
+            
+            verbose = True
+            for i, indice in enumerate(arrayIndices):
+                hft.addNode(arrayCodigos[i], indice, verbose)
+                
+            # SEMANA 3
+            array_lit_comp = self.comprimentoCodigos(HLIT, 257)
+            print(array_lit_comp)
+            print("\n")
+            
+            array_dist = self.comprimentoCodigos(HDIST, 1)
+            print(array_dist)
+            print("\n")
+            
+            #SEMANA 4
+            
             #
 
             # update number of blocks read
@@ -240,6 +268,57 @@ class GZIP:
                     arrayCodigos[indice] = code
                     indice += 1
         return arrayCodigos
+    
+    # Gera os simbolos (indices) relacionados a cada codigo para a arvore de huffman
+    def gerarArrayIndices(self, code_lengths, maxComp):
+        indices = []
+        for comprimento in range(1, maxComp + 1):  # Para cada comprimento válido
+            for i, length in enumerate(code_lengths):
+                if length == comprimento:
+                    indices.append(i)  # Adiciona o índice do código com esse comprimento
+        return indices
+    
+    def comprimentoCodigos(self, tamanho, tamanhoAdicional):
+        tamanhoTotal = tamanho + tamanhoAdicional
+        arrayComprimentos = [0] * tamanhoTotal
+        i = 0
+        while i < tamanhoTotal:
+            hft.resetCurNode()
+            pos = -2
+            
+            while pos == -2:
+                noAtual = self.readBits(1)
+                pos = hft.nextNode(str(noAtual))
+                
+            if pos == 16:
+                bitsAdicionais = self.readBits(2)
+                numExtensaoValor = 3 + bitsAdicionais
+                valorAnterior = arrayComprimentos[i - 1]
+                fim = i + numExtensaoValor
+                arrayComprimentos[i : fim] = [valorAnterior] * numExtensaoValor
+                i = fim
+                
+            elif pos == 17:
+                bitsAdicionais = self.readBits(3)
+                numZerosAdicionais = 3 + bitsAdicionais
+                fim = i + numZerosAdicionais
+                arrayComprimentos[i : fim] = [0] * numZerosAdicionais
+                i = fim
+                
+            elif pos == 18:
+                bitsAdicionais = self.readBits(7)
+                numZerosAdicionais = 11 + bitsAdicionais
+                fim = i + numZerosAdicionais
+                arrayComprimentos[i : fim] = [0] * numZerosAdicionais
+                i = fim
+                
+            else:
+                arrayComprimentos[i] = pos;
+                i += 1
+                
+        return arrayComprimentos
+            
+        
 
     def getOrigFileSize(self):
         ''' reads file size of original file (before compression) - ISIZE '''
