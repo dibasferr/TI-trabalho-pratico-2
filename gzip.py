@@ -12,7 +12,6 @@ Created on Mon Nov 11 14:31:08 2024
 import sys
 import numpy as np
 from huffmantree import HuffmanTree
-hft = HuffmanTree()
 
 
 class GZIPHeader:
@@ -204,20 +203,72 @@ class GZIP:
             print("Array de Índices:", arrayIndices)
             print("\n")
             
+            hft = HuffmanTree()
             verbose = True
             for i, indice in enumerate(arrayIndices):
                 hft.addNode(arrayCodigos[i], indice, verbose)
                 
             # SEMANA 3
-            array_lit_comp = self.comprimentoCodigos(HLIT, 257)
+            array_lit_comp = self.comprimentoCodigos(HLIT, 257, hft)
             print(array_lit_comp)
             print("\n")
             
-            array_dist = self.comprimentoCodigos(HDIST, 1)
+            array_dist = self.comprimentoCodigos(HDIST, 1, hft)
             print(array_dist)
             print("\n")
             
             #SEMANA 4
+            
+            # Codigos de huffman para os literais / comprimentos (repeticao das funçoes ja criadas)
+            MAX_COMP = max(array_lit_comp)  # Pega o maior valor do comprimento de codigos
+            array_cont_comp = self.contagemComprimentos(array_lit_comp, MAX_COMP)  # armazena em array_cont_comp as ocorrencias de cada comprimento
+            print("Array soma da ocorrencia de cada comprimento: ", array_cont_comp)
+            print("\n")
+            
+            arrayInicioCodigo = self.ArrayCodigos(array_cont_comp, MAX_COMP)  # armazena em arrayInicioCodigo o incio de codigo para cada comprimento
+            print("Array para inicio de cada codigo: ", arrayInicioCodigo)
+            print("\n")
+            
+            arrayCodigosLIT = self.gerarCodigos(array_cont_comp, arrayInicioCodigo, MAX_COMP)
+            print("Array dos codigos: ", arrayCodigosLIT)
+            print("\n")
+            
+            arrayIndicesLIT = self.gerarArrayIndices(array_lit_comp, MAX_COMP)
+            print("Array de Índices:", arrayIndices)
+            print("\n")
+            
+            # Codigos de huffman para as distancias (repeticao das funçoes ja criadas)
+            MAX_COMP = max(array_dist)  # Pega o maior valor do comprimento de codigos
+            array_cont_comp = self.contagemComprimentos(array_dist, MAX_COMP)  # armazena em array_cont_comp as ocorrencias de cada comprimento
+            print("Array soma da ocorrencia de cada comprimento: ", array_cont_comp)
+            print("\n")
+            
+            arrayInicioCodigo = self.ArrayCodigos(array_cont_comp, MAX_COMP)  # armazena em arrayInicioCodigo o incio de codigo para cada comprimento
+            print("Array para inicio de cada codigo: ", arrayInicioCodigo)
+            print("\n")
+            
+            arrayCodigosDIST = self.gerarCodigos(array_cont_comp, arrayInicioCodigo, MAX_COMP)
+            print("Array dos codigos: ", arrayCodigosDIST)
+            print("\n")
+            
+            arrayIndicesDIST = self.gerarArrayIndices(array_dist, MAX_COMP)
+            print("Array de Índices:", arrayIndices)
+            print("\n")
+            
+            # Arvore para os literais / comprimentos
+            CLC = HuffmanTree()
+            for i, indice in enumerate(arrayIndicesLIT):
+                CLC.addNode(arrayCodigosLIT[i], indice, verbose)
+                
+            print("\n")
+            
+            # Arvore para as distancias
+            D = HuffmanTree()
+            for i, indice in enumerate(arrayIndicesDIST):
+                D.addNode(arrayCodigosDIST[i], indice, verbose)    
+                
+            saida = self.descompactacao(CLC, D)
+            print(saida)
             
             #
 
@@ -278,7 +329,7 @@ class GZIP:
                     indices.append(i)  # Adiciona o índice do código com esse comprimento
         return indices
     
-    def comprimentoCodigos(self, tamanho, tamanhoAdicional):
+    def comprimentoCodigos(self, tamanho, tamanhoAdicional, hft):
         tamanhoTotal = tamanho + tamanhoAdicional
         arrayComprimentos = [0] * tamanhoTotal
         i = 0
@@ -290,7 +341,11 @@ class GZIP:
                 noAtual = self.readBits(1)
                 pos = hft.nextNode(str(noAtual))
                 
-            if pos == 16:
+            if pos == -1:
+                print("Error")
+                return -1
+                
+            elif pos == 16:
                 bitsAdicionais = self.readBits(2)
                 numExtensaoValor = 3 + bitsAdicionais
                 valorAnterior = arrayComprimentos[i - 1]
@@ -318,7 +373,107 @@ class GZIP:
                 
         return arrayComprimentos
             
+    def descompactacao(self, CLC, DIST):
+        saida = []
+        indice = 0
+        while True:
+            CLC.resetCurNode()
+            pos = -2
+            
+            while pos == -2:
+                bit = self.readBits(1)
+                pos = CLC.nextNode(str(bit))
+            
+            if pos == -1:
+                print("Error")
+                break
+            
+            elif pos < 256:
+                literal = pos
+                saida.append(chr(literal))
+                indice += 1
+                
+            elif pos == 256:
+                print("Fim do bloco")
+                break
+            
+            else:
+                comp = self.decodifica_comp(pos)
+                dist = self.decodifica_dist(DIST)
+                
+                saida_fatiada = saida[indice - dist : indice - dist + comp]
+                saida.extend(saida_fatiada)
+            
+        return saida
+    
+    def decodifica_comp(self, pos):
+        if pos <= 264:
+            comp = pos
         
+        elif pos >= 265 and pos <= 268:
+            bitsAdcionais = self.readBits(1)
+            comp = 11 + bitsAdcionais
+        
+        elif pos >= 269 and pos <= 272:
+            bitsAdcionais = self.readBits(2)
+            comp = 19 + bitsAdcionais
+        
+        elif pos >= 273 and pos <= 276:
+            bitsAdcionais = self.readBits(3)
+            comp = 35 + bitsAdcionais
+            
+        elif pos >= 277 and pos <= 280:
+            bitsAdcionais = self.readBits(4)
+            comp = 67 + bitsAdcionais
+            
+        elif pos >= 281 and pos <= 284:
+            bitsAdcionais = self.readBits(5)
+            comp = 131 + bitsAdcionais
+        return comp
+                
+    def decodifica_dist(self, DIST):
+        # Criacao dos arrays para a logica dos bits extras das distancias
+        arrayCode = np.arange(0, 30)
+        arrayBitsEtras = np.zeros_like(arrayCode)
+        arraySomaDist = np.zeros_like(arrayCode)
+
+        num = 1
+        for i in range(4, 30, 2):
+            arrayBitsEtras[i] = num
+            arrayBitsEtras[i+1] = num
+            num += 1
+            
+        num = 1
+        for i in range(4):
+            arraySomaDist[i] = num
+            num += 1
+
+        saltos = 2
+        for i in range(4, 30, 2):
+            arraySomaDist[i] = num
+            arraySomaDist[i+1] = num + saltos
+            saltos *= 2
+            num += saltos
+        
+        DIST.resetCurNode()
+        pos = -2
+        
+        while pos == -2:
+            bit = self.readBits(1)
+            pos = DIST.nextNode(str(bit))
+        
+        if pos == -1:
+            print("Error")
+            return
+        
+        for indice, elemento in enumerate(arrayCode):
+            if pos == elemento:
+                if pos >= 0 and pos <= 3:
+                    distancia = arraySomaDist[indice]
+                else:
+                    bitsExtras = self.readBits(arrayBitsEtras[indice])
+                    distancia = arraySomaDist[indice] + bitsExtras
+        return distancia
 
     def getOrigFileSize(self):
         ''' reads file size of original file (before compression) - ISIZE '''
