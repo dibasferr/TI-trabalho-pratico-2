@@ -270,6 +270,10 @@ class GZIP:
             saida = self.descompactacao(CLC, D)
             print(saida)
             
+            with open(self.gzh.fName, 'wb') as arquivo:
+                arquivo.write(bytearray(saida))
+            arquivo.close()
+            
             #
 
             # update number of blocks read
@@ -390,7 +394,7 @@ class GZIP:
             
             elif pos < 256:
                 literal = pos
-                saida.append(chr(literal))
+                saida.append(literal)
                 indice += 1
                 
             elif pos == 256:
@@ -401,14 +405,36 @@ class GZIP:
                 comp = self.decodifica_comp(pos)
                 dist = self.decodifica_dist(DIST)
                 
-                saida_fatiada = saida[indice - dist : indice - dist + comp]
-                saida.extend(saida_fatiada)
+                for i in range(comp):
+                    saida.append(saida[indice - dist + i])
+                indice += comp
             
         return saida
     
     def decodifica_comp(self, pos):
-        if pos <= 264:
-            comp = pos
+        if pos == 257:
+            comp = 3
+        
+        elif pos == 258:
+            comp = 4
+            
+        elif pos == 259:
+            comp = 5
+            
+        elif pos == 260:
+            comp = 6
+            
+        elif pos == 261:
+            comp = 7
+            
+        elif pos == 262:
+            comp = 8
+            
+        elif pos == 263:
+            comp = 9
+            
+        elif pos == 264:
+            comp = 10
         
         elif pos >= 265 and pos <= 268:
             bitsAdcionais = self.readBits(1)
@@ -429,6 +455,8 @@ class GZIP:
         elif pos >= 281 and pos <= 284:
             bitsAdcionais = self.readBits(5)
             comp = 131 + bitsAdcionais
+        else:
+            comp = 0
         return comp
                 
     def decodifica_dist(self, DIST):
@@ -442,7 +470,8 @@ class GZIP:
             arrayBitsEtras[i] = num
             arrayBitsEtras[i+1] = num
             num += 1
-            
+          
+        # Inicicaliza o array das distancias com 1 2 3 4
         num = 1
         for i in range(4):
             arraySomaDist[i] = num
@@ -454,6 +483,10 @@ class GZIP:
             arraySomaDist[i+1] = num + saltos
             saltos *= 2
             num += saltos
+        
+        #print(arrayCode)
+        #print(arrayBitsEtras)
+        #print(arraySomaDist)
         
         DIST.resetCurNode()
         pos = -2
