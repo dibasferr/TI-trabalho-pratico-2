@@ -412,51 +412,40 @@ class GZIP:
         return saida
     
     def decodifica_comp(self, pos):
-        if pos == 257:
-            comp = 3
+        # Criacao dos arrays para a logica dos bits extras dos comprimentos
+        arrayCode = np.arange(257, 286)
+        arrayBitsEtras = np.zeros_like(arrayCode)
+        arraySomaComp = np.zeros_like(arrayCode)
         
-        elif pos == 258:
-            comp = 4
+        num = 1
+        for i in range(8, 28, 4):
+            arrayBitsEtras[i] = num
+            arrayBitsEtras[i+1] = num
+            arrayBitsEtras[i+2] = num
+            arrayBitsEtras[i+3] = num
+            num += 1
             
-        elif pos == 259:
-            comp = 5
-            
-        elif pos == 260:
-            comp = 6
-            
-        elif pos == 261:
-            comp = 7
-            
-        elif pos == 262:
-            comp = 8
-            
-        elif pos == 263:
-            comp = 9
-            
-        elif pos == 264:
-            comp = 10
+        num = 3
+        for i in range(8):
+            arraySomaComp[i] = num
+            num += 1
         
-        elif pos >= 265 and pos <= 268:
-            bitsAdcionais = self.readBits(1)
-            comp = 11 + bitsAdcionais
+        saltos = 2
+        for i in range(8, 28, 4):
+            arraySomaComp[i] = num
+            arraySomaComp[i+1] = num + saltos
+            arraySomaComp[i+2] = num + (2 * saltos)
+            arraySomaComp[i+3] = num + (3 * saltos)
+            saltos *= 2
+            num += (2 * saltos)
         
-        elif pos >= 269 and pos <= 272:
-            bitsAdcionais = self.readBits(2)
-            comp = 19 + bitsAdcionais
-        
-        elif pos >= 273 and pos <= 276:
-            bitsAdcionais = self.readBits(3)
-            comp = 35 + bitsAdcionais
-            
-        elif pos >= 277 and pos <= 280:
-            bitsAdcionais = self.readBits(4)
-            comp = 67 + bitsAdcionais
-            
-        elif pos >= 281 and pos <= 284:
-            bitsAdcionais = self.readBits(5)
-            comp = 131 + bitsAdcionais
-        else:
-            comp = 0
+        for indice, elemento in enumerate(arrayCode):
+            if elemento == pos:
+                if pos >= 0 and pos <= 3:
+                    comp = arraySomaComp[indice]
+                else:
+                    bitsExtras = self.readBits(arrayBitsEtras[indice])
+                    comp = arraySomaComp[indice] + bitsExtras
         return comp
                 
     def decodifica_dist(self, DIST):
@@ -483,10 +472,6 @@ class GZIP:
             arraySomaDist[i+1] = num + saltos
             saltos *= 2
             num += saltos
-        
-        #print(arrayCode)
-        #print(arrayBitsEtras)
-        #print(arraySomaDist)
         
         DIST.resetCurNode()
         pos = -2
@@ -551,13 +536,16 @@ class GZIP:
         return value
         
 
-if __name__ == '__main__':
-
-    # gets filename from command line if provided
-    fileName = "FAQ.txt.gz"
-    if len(sys.argv) > 1:
-        fileName = sys.argv[1]
-
-    # decompress file
-    gz = GZIP(fileName)
-    gz.decompress()
+if __name__ == "__main__":
+    # Lista de arquivos a serem descompactados
+    arquivos_gzip = ["FAQ.txt.gz", "sample_audio.mp3.gz", "sample_image.jpeg.gz", "sample_large_text.txt.gz"]
+    
+    # Processar cada arquivo da lista
+    for arquivo in arquivos_gzip:
+        try:
+            print(f"Descompactando arquivo: {arquivo}")
+            gzip_obj = GZIP(arquivo)  # Criar objeto GZIP
+            gzip_obj.decompress()  # Chamar método para descompactar
+            print(f"Arquivo {arquivo} descompactado com sucesso.\n")
+        except Exception as e:
+            print(f"Erro ao descompactar o arquivo {arquivo}: {e}\n")
