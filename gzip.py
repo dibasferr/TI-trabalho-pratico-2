@@ -204,7 +204,7 @@ class GZIP:
             print("\n")
             
             hft = HuffmanTree()
-            verbose = True
+            verbose = False
             for i, indice in enumerate(arrayIndices):
                 hft.addNode(arrayCodigos[i], indice, verbose)
                 
@@ -259,8 +259,6 @@ class GZIP:
             CLC = HuffmanTree()
             for i, indice in enumerate(arrayIndicesLIT):
                 CLC.addNode(arrayCodigosLIT[i], indice, verbose)
-                
-            print("\n")
             
             # Arvore para as distancias
             D = HuffmanTree()
@@ -268,7 +266,6 @@ class GZIP:
                 D.addNode(arrayCodigosDIST[i], indice, verbose)    
                 
             saida = self.descompactacao(CLC, D)
-            print(saida)
             
             with open(self.gzh.fName, 'wb') as arquivo:
                 arquivo.write(bytearray(saida))
@@ -538,7 +535,7 @@ class GZIP:
 
 if __name__ == "__main__":
     # Lista de arquivos a serem descompactados
-    arquivos_gzip = ["FAQ.txt.gz", "sample_audio.mp3.gz", "sample_image.jpeg.gz", "sample_large_text.txt.gz"]
+    arquivos_gzip = ["FAQ.txt.gz", "sample_large_text.txt.gz", "sample_audio.mp3.gz", "sample_image.jpeg.gz"]
     
     # Processar cada arquivo da lista
     for arquivo in arquivos_gzip:
