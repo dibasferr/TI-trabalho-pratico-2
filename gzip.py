@@ -149,6 +149,7 @@ class GZIP:
         print(self.gzh.fName)
 
         # MAIN LOOP - decode block by block
+        saida = []
         BFINAL = 0
         while not BFINAL == 1:
 
@@ -210,11 +211,11 @@ class GZIP:
                 
             # SEMANA 3
             array_lit_comp = self.comprimentoCodigos(HLIT, 257, hft)
-            print(array_lit_comp)
+            #print(array_lit_comp)
             print("\n")
             
             array_dist = self.comprimentoCodigos(HDIST, 1, hft)
-            print(array_dist)
+            #print(array_dist)
             print("\n")
             
             #SEMANA 4
@@ -265,16 +266,18 @@ class GZIP:
             for i, indice in enumerate(arrayIndicesDIST):
                 D.addNode(arrayCodigosDIST[i], indice, verbose)    
                 
-            saida = self.descompactacao(CLC, D)
-            
-            with open(self.gzh.fName, 'wb') as arquivo:
-                arquivo.write(bytearray(saida))
-            arquivo.close()
+            saida = self.descompactacao(CLC, D, saida)
             
             #
 
             # update number of blocks read
             numBlocks += 1
+
+        # SEMANA 5
+        
+        with open(self.gzh.fName, 'wb') as arquivo:
+            arquivo.write(bytearray(saida))
+        arquivo.close()
 
         # close file
 
@@ -374,9 +377,19 @@ class GZIP:
                 
         return arrayComprimentos
             
-    def descompactacao(self, CLC, DIST):
-        saida = []
+    def descompactacao(self, CLC, DIST, saida):
         indice = 0
+        
+        # Arrays para a logica dos comprimentos
+        arrayCodeComp = np.arange(257, 286)
+        arrayBitsExtraComp = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0]
+        arrayBaseComp = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258]
+        
+        # Arrays para a logica das distancias
+        arrayCodeDist = np.arange(0, 30)
+        arrayBitsExtraDist = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13]
+        arrayBaseDist = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577]
+        
         while True:
             CLC.resetCurNode()
             pos = -2
@@ -399,8 +412,8 @@ class GZIP:
                 break
             
             else:
-                comp = self.decodifica_comp(pos)
-                dist = self.decodifica_dist(DIST)
+                comp = self.decodifica_comp(pos, arrayCodeComp, arrayBaseComp, arrayBitsExtraComp)
+                dist = self.decodifica_dist(DIST, arrayCodeDist, arrayBaseDist, arrayBitsExtraDist)
                 
                 for i in range(comp):
                     saida.append(saida[indice - dist + i])
@@ -408,68 +421,17 @@ class GZIP:
             
         return saida
     
-    def decodifica_comp(self, pos):
-        # Criacao dos arrays para a logica dos bits extras dos comprimentos
-        arrayCode = np.arange(257, 286)
-        arrayBitsEtras = np.zeros_like(arrayCode)
-        arraySomaComp = np.zeros_like(arrayCode)
-        
-        num = 1
-        for i in range(8, 28, 4):
-            arrayBitsEtras[i] = num
-            arrayBitsEtras[i+1] = num
-            arrayBitsEtras[i+2] = num
-            arrayBitsEtras[i+3] = num
-            num += 1
-            
-        num = 3
-        for i in range(8):
-            arraySomaComp[i] = num
-            num += 1
-        
-        saltos = 2
-        for i in range(8, 28, 4):
-            arraySomaComp[i] = num
-            arraySomaComp[i+1] = num + saltos
-            arraySomaComp[i+2] = num + (2 * saltos)
-            arraySomaComp[i+3] = num + (3 * saltos)
-            saltos *= 2
-            num += (2 * saltos)
-        
+    def decodifica_comp(self, pos, arrayCode, arrayBaseComp, arrayBitsEtras):
         for indice, elemento in enumerate(arrayCode):
             if elemento == pos:
                 if pos >= 0 and pos <= 3:
-                    comp = arraySomaComp[indice]
+                    comp = arrayBaseComp[indice]
                 else:
                     bitsExtras = self.readBits(arrayBitsEtras[indice])
-                    comp = arraySomaComp[indice] + bitsExtras
+                    comp = arrayBaseComp[indice] + bitsExtras
         return comp
                 
-    def decodifica_dist(self, DIST):
-        # Criacao dos arrays para a logica dos bits extras das distancias
-        arrayCode = np.arange(0, 30)
-        arrayBitsEtras = np.zeros_like(arrayCode)
-        arraySomaDist = np.zeros_like(arrayCode)
-
-        num = 1
-        for i in range(4, 30, 2):
-            arrayBitsEtras[i] = num
-            arrayBitsEtras[i+1] = num
-            num += 1
-          
-        # Inicicaliza o array das distancias com 1 2 3 4
-        num = 1
-        for i in range(4):
-            arraySomaDist[i] = num
-            num += 1
-
-        saltos = 2
-        for i in range(4, 30, 2):
-            arraySomaDist[i] = num
-            arraySomaDist[i+1] = num + saltos
-            saltos *= 2
-            num += saltos
-        
+    def decodifica_dist(self, DIST, arrayCode, arrayBaseDist, arrayBitsEtras):
         DIST.resetCurNode()
         pos = -2
         
@@ -484,10 +446,10 @@ class GZIP:
         for indice, elemento in enumerate(arrayCode):
             if pos == elemento:
                 if pos >= 0 and pos <= 3:
-                    distancia = arraySomaDist[indice]
+                    distancia = arrayBaseDist[indice]
                 else:
                     bitsExtras = self.readBits(arrayBitsEtras[indice])
-                    distancia = arraySomaDist[indice] + bitsExtras
+                    distancia = arrayBaseDist[indice] + bitsExtras
         return distancia
 
     def getOrigFileSize(self):
@@ -535,7 +497,7 @@ class GZIP:
 
 if __name__ == "__main__":
     # Lista de arquivos a serem descompactados
-    arquivos_gzip = ["FAQ.txt.gz", "sample_large_text.txt.gz", "sample_audio.mp3.gz", "sample_image.jpeg.gz"]
+    arquivos_gzip = ["FAQ.txt.gz", "sample_image.jpeg.gz", "sample_audio.mp3.gz", "sample_large_text.txt.gz"]
     
     # Processar cada arquivo da lista
     for arquivo in arquivos_gzip:
