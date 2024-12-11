@@ -266,7 +266,7 @@ class GZIP:
             for i, indice in enumerate(arrayIndicesDIST):
                 D.addNode(arrayCodigosDIST[i], indice, verbose)    
                 
-            saida = self.descompactacao(CLC, D, saida)
+            self.descompactacao(CLC, D, saida)
             
             #
 
@@ -378,7 +378,6 @@ class GZIP:
         return arrayComprimentos
             
     def descompactacao(self, CLC, DIST, saida):
-        indice = 0
         
         # Arrays para a logica dos comprimentos
         arrayCodeComp = np.arange(257, 286)
@@ -404,22 +403,19 @@ class GZIP:
             
             elif pos < 256:
                 literal = pos
-                saida.append(literal)
-                indice += 1
+                saida.append(literal)   
                 
             elif pos == 256:
                 print("Fim do bloco")
                 break
-            
+    
             else:
                 comp = self.decodifica_comp(pos, arrayCodeComp, arrayBaseComp, arrayBitsExtraComp)
                 dist = self.decodifica_dist(DIST, arrayCodeDist, arrayBaseDist, arrayBitsExtraDist)
                 
                 for i in range(comp):
-                    saida.append(saida[indice - dist + i])
-                indice += comp
-            
-        return saida
+                    saida.append(saida[-dist])
+                
     
     def decodifica_comp(self, pos, arrayCode, arrayBaseComp, arrayBitsEtras):
         for indice, elemento in enumerate(arrayCode):
